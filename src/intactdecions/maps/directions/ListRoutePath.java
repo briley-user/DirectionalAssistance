@@ -2,11 +2,16 @@ package intactdecions.maps.directions;
 import com.google.maps.DirectionsApi;
 import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
-import com.google.maps.PendingResult;
 import com.google.maps.errors.ApiException;
 import com.google.maps.model.*;
+import java.util.UUID;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.*;
 
 import org.joda.time.DateTime;
@@ -55,21 +60,33 @@ public class ListRoutePath {
 		return location;
 	}
 	
-	public static void DisplayDirections(DirectionsResult directions) {
+	public static void DisplayDirections(DirectionsResult directions) throws IOException {
 		
-
+    
+    String outputString = "<!DOCTYPE html>" + "\n" + "<html>" + "\n" + "<body>" +"\n"; 
+    File out = new File(GenerateRandomUUID().toString()+".html");
 	for (int i=0; i < directions.routes.length; ++i) {
 			for (int x=0; x < directions.routes[i].legs.length; ++x) {
 				for (int y=0; y < directions.routes[i].legs[x].steps.length; y++) {
 					System.out.print("<b> Route: "+i);
 					System.out.print(" Leg: "+x);
 					System.out.println(" Step: "+y+"</b>");
-					System.out.println("<b> "+ directions.routes[i].legs[x].steps[y].htmlInstructions.toString()+"</b>");
+					outputString = outputString + "<p> Route: "+i+" Leg: "+x +" Step: "+y+" ";
+					outputString = outputString +  " " + directions.routes[i].legs[x].steps[y].htmlInstructions.toString()+"\n"+"</p>";
+					FileUtils.writeStringToFile(out,outputString, Charset.forName("UTF-8"));
 				}
 				
 			}
 		}
+	    outputString = outputString + "\n" + "</body" + "\n" + "</html>";
+		FileUtils.writeStringToFile(out,outputString, Charset.forName("UTF-8")); // write the full string to the file.
 	}
+	
+	public static UUID GenerateRandomUUID( ) {
+		
+	return UUID.randomUUID();
+	}
+	
 	public static void main(String[] args) throws IOException, InterruptedException, ApiException {
 		// TODO Auto-generated method
      // ListRoutePath aRoute = new ListRoutePath();

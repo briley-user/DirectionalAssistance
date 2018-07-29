@@ -1,24 +1,53 @@
 package intactdecions.maps.directions;
+
 import com.google.maps.DirectionsApi;
 import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.errors.ApiException;
 import com.google.maps.model.*;
-import java.util.UUID;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+
+import java.io.*;
+
 import java.nio.charset.Charset;
-import java.time.*;
+
+import org.apache.commons.io.FileUtils;
 
 import org.joda.time.DateTime;
+
+
 public class ListRoutePath {
-	private final static String API_KEY = "AIzaSyBMT0TjgaTNozCM-pb832MUf9RG7V5_-Sc";
-			 
+	private final static String API_FILE ="Directions_Api_Key.txt";
+	private final static String API_KEY = ReadStringsFromFile(API_FILE).get(0);
+	public static List<String> ReadStringsFromFile (String filename) {
+	
+		List<String> fileContent = null;
+		try {
+		fileContent= FileUtils.readLines(new File(filename),Charset.forName("UTF-8"));
+		} catch (IOException e) {
+		}
+		
+		return fileContent;
+				
+	
+	}
+	
 	public static DirectionsResult getDirections(LatLng origin, LatLng destination) throws IOException, InterruptedException, ApiException {
+		
+		/*String API_KEY = null; 
+				
+		List<String> lines = ReadStringsFromFile(API_FILE);
+		try {
+			if (!lines.equals(null)) {
+				API_KEY=lines.get(0);
+			}
+		} catch (NullPointerException e) {
+		
+		}
+		*/
+		
 		
 		DateTime now = new DateTime();
 		GeoApiContext apiContext = new GeoApiContext.Builder()

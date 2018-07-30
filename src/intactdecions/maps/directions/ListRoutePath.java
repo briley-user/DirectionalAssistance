@@ -33,7 +33,7 @@ public class ListRoutePath {
 	private final static String MYSQL_TABLE = ReadStringsFromFile(MYSQL_FILE).get(2);
 	private final static String MYSQL_USERNAME = ReadStringsFromFile(MYSQL_FILE).get(3);
 	private final static String MYSQL_PASSWORD = ReadStringsFromFile(MYSQL_FILE).get(4);
-	private final static String MYSQL_INSERT_STATEMENT = "SELECT * FROM "+ MYSQL_TABLE;
+	private final static String MYSQL_SELECT_STATEMENT = "SELECT * FROM "+ MYSQL_TABLE;
 	public static List<String> ReadStringsFromFile (String filename) {
 	
 		
@@ -60,6 +60,28 @@ public class ListRoutePath {
 			}
 	}
 
+	public static String Check_For_Cached_Request(LatLng origin, LatLng destination) {
+		String cached_record= null;
+		String MYSQL_SUFFIX_STATEMENT = " WHERE origin_longitude="+origin.lng+" AND origin_lattitude="+origin.lat+
+				" AND destination_longitude="+destination.lng+" AND destination_lattitude="+destination.lat;
+		try {
+			Class.forName("com.mysql.jdbc.Driver");
+			Connection con= DriverManager.getConnection("jdbc:mysql://"+ MYSQL_SERVER_AND_PORT +"/"+ MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD);
+			Statement stmt = con.createStatement();
+			ResultSet rs = stmt.executeQuery(MYSQL_SELECT_STATEMENT + MYSQL_SUFFIX_STATEMENT);
+			System.out.println(MYSQL_SELECT_STATEMENT + MYSQL_SUFFIX_STATEMENT);
+			
+			while (rs.next()) {
+			cached_record = rs.getString("cached_filename");
+							
+			}
+			con.close();
+		} catch(Exception e) {
+			System.out.println("Error:"+e);
+			}
+		System.out.println("record from database:" + cached_record);
+		return cached_record;
+	 }
 	
 	public static DirectionsResult getDirections(LatLng origin, LatLng destination) throws IOException, InterruptedException, ApiException {
 		
@@ -120,7 +142,7 @@ public class ListRoutePath {
     db_statement = "INSERT INTO " + MYSQL_TABLE+" (uuid_descriptor,origin_longitude,origin_lattitude,destination_longitude,destination_lattitude,cached_filename) "+
     "values("+ "'"+randomFilenameString +"'"+","+origin_lat+","+origin_long+","+dest_lat+","+ dest_long+","+"'"+filename+"'"+")";
     
-    System.out.println(db_statement);
+  
 	for (int i=0; i < directions.routes.length; ++i) {
 			
 			for (int x=0; x < directions.routes[i].legs.length; ++x) {
@@ -140,6 +162,7 @@ public class ListRoutePath {
 	    outputString = outputString + "\n" + "</body" + "\n" + "</html>";
 		FileUtils.writeStringToFile(out,outputString, Charset.forName("UTF-8")); // write the full string to the file.
 		MySQL_INSERT(db_statement);
+		System.out.println("API call generated and file name "+filename+" has been created");
 	}
 	
 	public static UUID GenerateRandomUUID( ) {
@@ -149,14 +172,24 @@ public class ListRoutePath {
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ApiException {
 		// TODO Auto-generated method
-     // ListRoutePath aRoute = new ListRoutePath();
-    
+	
+		String map_directions_filename;
 	LatLng origin = setLatLng(40.7128, -79.0060) ;
      LatLng destination = setLatLng(36.1699, -115.1398) ;
-     
-     DisplayDirections(getDirections(origin, destination)) ;
+     map_directions_filename = Check_For_Cached_Request(origin, destination);
+     System.out.println(map_directions_filename);
+        //need a loops statement and a check for null so that we do not receive a null pointer exception.
+        // should be a conditional statement and a better loop mechanics, to check for duplicate entries.	
+    if (map_directions_filename != null) {
+    	DisplayDirections(getDirections(origin, destination)) ; //execute the google API Call
+    	// need to separate these two methods and and a new method that stores the data needed into global variables that can be used in the insert statement
+    	// need to store the search request coordinates and not the retrieved coordinates into the cached database table
+    	// the level of percision will differ from what is requested by the user and what is retrieved from the service
+    } else {
+    	System.out.println("Record already cached in the database. Use filename: " + map_directions_filename);
+    }
      // can display in an html file
-     // or store as a blob with html code into a database, and then query it out to document...randomized  html filename to be genreated
+     
 	}
 
 }

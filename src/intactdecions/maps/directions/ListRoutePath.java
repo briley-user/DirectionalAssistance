@@ -34,6 +34,14 @@ public class ListRoutePath {
 	private final static String MYSQL_USERNAME = ReadStringsFromFile(MYSQL_FILE).get(3);
 	private final static String MYSQL_PASSWORD = ReadStringsFromFile(MYSQL_FILE).get(4);
 	private final static String MYSQL_SELECT_STATEMENT = "SELECT * FROM "+ MYSQL_TABLE;
+	public static LatLng REQUESTED_ORIGIN;
+	public static LatLng REQUESTED_DESTINATION;
+
+	public static void SetRequestedCoodrinates (LatLng origin, LatLng destintation) {
+		REQUESTED_ORIGIN = origin;
+		REQUESTED_DESTINATION = destintation;
+	}
+	
 	public static List<String> ReadStringsFromFile (String filename) {
 	
 		
@@ -69,7 +77,7 @@ public class ListRoutePath {
 			Connection con= DriverManager.getConnection("jdbc:mysql://"+ MYSQL_SERVER_AND_PORT +"/"+ MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD);
 			Statement stmt = con.createStatement();
 			ResultSet rs = stmt.executeQuery(MYSQL_SELECT_STATEMENT + MYSQL_SUFFIX_STATEMENT);
-			System.out.println(MYSQL_SELECT_STATEMENT + MYSQL_SUFFIX_STATEMENT);
+		//	System.out.println(MYSQL_SELECT_STATEMENT + MYSQL_SUFFIX_STATEMENT);
 			
 			while (rs.next()) {
 			cached_record = rs.getString("cached_filename");
@@ -79,7 +87,7 @@ public class ListRoutePath {
 		} catch(Exception e) {
 			System.out.println("Error:"+e);
 			}
-		System.out.println("record from database:" + cached_record);
+		//System.out.println("record from database:" + cached_record);
 		return cached_record;
 	 }
 	
@@ -92,11 +100,6 @@ public class ListRoutePath {
 				.build();
 		
 		DirectionsApiRequest request = DirectionsApi.newRequest(apiContext);
-	/*	request.origin(origin); // set the origin
-		request.destination(destination); // set the destination
-		request.mode(TravelMode.DRIVING); //set travelling mode
-		request.departureTime(now);
-		request.await(); */
 		
 		DirectionsResult result = request
 				.mode(TravelMode.DRIVING)
@@ -104,18 +107,7 @@ public class ListRoutePath {
 				.destination(destination)
 				.departureTime(now)
 				.await();
-/*		request.setCallback(new PendingResult.Callback<DirectionsResult>() {
-			@Override
-			public void onResult(DirectionsResult result) {
-				DirectionsRoute[] routes = result.routes;
-				System.out.println(routes.toString());
-			}
-			
-			@Override
-			public void onFailure(Throwable e) {
-			}
-		});
-	*/
+
 	    
 		return result;
 		}
@@ -133,16 +125,15 @@ public class ListRoutePath {
     String db_statement;
     String randomFilenameString= GenerateRandomUUID().toString();
     String filename = randomFilenameString +".html";
-    File out = new File(filename);
-    double origin_lat = directions.routes[0].legs[0].startLocation.lat;
-    double origin_long = directions.routes[0].legs[0].startLocation.lng;
-    double dest_lat = directions.routes[0].legs[0].endLocation.lat;
-    double dest_long = directions.routes[0].legs[0].endLocation.lng;
+    File out = new File("cache/"+filename);
+    double origin_lat = REQUESTED_ORIGIN.lat;
+    double origin_long = REQUESTED_ORIGIN.lng;
+    double dest_lat = REQUESTED_DESTINATION.lat;
+    double dest_long = REQUESTED_DESTINATION.lng;
     
     db_statement = "INSERT INTO " + MYSQL_TABLE+" (uuid_descriptor,origin_longitude,origin_lattitude,destination_longitude,destination_lattitude,cached_filename) "+
-    "values("+ "'"+randomFilenameString +"'"+","+origin_lat+","+origin_long+","+dest_lat+","+ dest_long+","+"'"+filename+"'"+")";
+    "values("+ "'"+randomFilenameString +"'"+","+origin_long+","+origin_lat+","+dest_long+","+ dest_lat+","+"'"+filename+"'"+")";
     
-  
 	for (int i=0; i < directions.routes.length; ++i) {
 			
 			for (int x=0; x < directions.routes[i].legs.length; ++x) {
@@ -173,18 +164,25 @@ public class ListRoutePath {
 	public static void main(String[] args) throws IOException, InterruptedException, ApiException {
 		// TODO Auto-generated method
 	
-		String map_directions_filename;
-	LatLng origin = setLatLng(40.7128, -79.0060) ;
-     LatLng destination = setLatLng(36.1699, -115.1398) ;
+	String map_directions_filename;
+	DirectionsResult dr;
+	LatLng origin = setLatLng(0,-0.9) ;
+     LatLng destination = setLatLng(1,-1) ;
      map_directions_filename = Check_For_Cached_Request(origin, destination);
-     System.out.println(map_directions_filename);
+ 
         //need a loops statement and a check for null so that we do not receive a null pointer exception.
         // should be a conditional statement and a better loop mechanics, to check for duplicate entries.	
-    if (map_directions_filename != null) {
-    	DisplayDirections(getDirections(origin, destination)) ; //execute the google API Call
-    	// need to separate these two methods and and a new method that stores the data needed into global variables that can be used in the insert statement
-    	// need to store the search request coordinates and not the retrieved coordinates into the cached database table
-    	// the level of percision will differ from what is requested by the user and what is retrieved from the service
+    if (map_directions_filename == null)
+      { // no match is found in the database
+    	SetRequestedCoodrinates(origin, destination); //store the requested coordinated in the global variables
+    	dr = getDirections(origin, destination); //get directions using the requested coordinated using Google API Call 
+    	if (dr.routes.length >0) {
+    		DisplayDirections(dr) ; // store in the cached directions table and create html file
+    		System.out.println("Coordinates have been cached");
+    	} else {
+    		System.out.println("Route is not possible. No results returned"); 
+    			}
+    	
     } else {
     	System.out.println("Record already cached in the database. Use filename: " + map_directions_filename);
     }
